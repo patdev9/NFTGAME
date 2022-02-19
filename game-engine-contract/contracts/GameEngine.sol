@@ -524,65 +524,73 @@ contract Ownable is Context {
 }
 
 
-contract Token is ERC20, Context, Ownable {
+contract Token is Context, Ownable {
     using SafeMath for uint;
     using Address for address;
     using AddrArrayLib for AddrArrayLib.Addresses;
     using Uint256ArrayLib for Uint256ArrayLib.Values;
+    mapping(address=>bool) public manager;
     uint betIndex;
     mapping(string => uint) public betIdByHash;
     mapping(uint => uint) public betAmountById;
     mapping(address => uint) public lastBetIdBySender;
-    Uint256ArrayLib.Values private myOpenBets;
+    mapping(address => uint) public senderByBetId;
+    Uint256ArrayLib.Values private openBets;
     uint tax = 1000;
     address taxTo;
     struct BetResult {
         uint hpA;
         uint hpB;
         uint paid;
+        address winner;
+        address looser;
     }
     constructor(){
         taxTo = msg.sender;
+        manager[msg.sender] = true;
+    }
+    modifier onlyManager(){
+        require(manager[msg.sender], "not mager");
+        _;
     }
     mapping(string => BetResult) public betResults;
 
     function deposit(string memory hash) public payable {
         uint id = ++betIndex;
         betIdByHash[hash] = id;
-        betAmountById[id] = msg.value;
+        uint value = msg.value;
+        uint tax = value.mul(tax).div(10000);
+        (bool s,) = payable(taxTo).call{value : tax}("");
+        require(s, "Failed to send money to treasure");
+
+        betAmountById[id] = value;
         lastBetIdBySender[msg.sender] = id;
-        myOpenBets.pushValue(id);
+        senderByBetId[id] = msg.sender;
+        openBets.pushValue(id);
     }
     function setTax(uint _tax, address _taxTo) public onlyOwner{
         tax = _tax;
         taxTo = _taxTo;
     }
-    function getMyOpenBets() public view returns (uint[] memory){
-        return myOpenBets.getAllValues();
+    function setTax(address _manager, bool _status) public onlyOwner{
+        manager[_manager] = _status;
     }
-
-    function bet(string memory hash, uint _bet0, uint _bet1) public {
-        require(betAmountById[_bet0], "bet0: invalid deposit");
-        require(betAmountById[_bet1], "bet1: invalid deposit");
-        require(betAmountById[_bet0] == betAmountById[_bet1], "bet are not equals");
+    function getOpenBets() public view returns (uint[] memory){
+        return openBets.getAllValues();
+    }
+    function bet(uint winner, uint looser) public {
+        require(betAmountById[winner], "bet0: invalid deposit");
+        require(betAmountById[looser], "bet1: invalid deposit");
+        require(betAmountById[winner] == betAmountById[looser], "bet are not equals");
         BetResult storage bet = betResults[hash];
-        require(bet.hpA == 0 && bet.hpB == 0, "bet slot already in use");
-        bet.paid = betAmountById[_bet0] + betAmountById[_bet1];
-        uint tax = bet.paid.mul(tax).div(10000);
-        bet.paid -= tax;
-        (bool transferWinnerStatus,) = payable(msg.sender).call{value : bet.paid}("");
-        require(transferWinnerStatus, "Failed to send money to winner");
-        (bool transferTaxStatus,) = payable(taxTo).call{value : tax}("");
-        require(transferTaxStatus, "Failed to send money to treasure");
-        bet.hpA = getHpHit(_bet0);
-        bet.hpB = getHpHit(_bet1);
-    }
+        bet.paid = betAmountById[winner] + betAmountById[looser];
+        bet.winner = senderByBetId[winner];
+        bet.looser = senderByBetId[looser];
+        betAmountById[winner] = 0;
+        betAmountById[looser] = 0;
 
-    function getHpHit(uint id) internal returns (uint){
-        uint256 _randomNumber;
-        bytes32 _structHash = keccak256(abi.encode(msg.sender, id, block.difficulty, gasleft()));
-        _randomNumber = uint256(_structHash);
-        assembly {_randomNumber := mod(_randomNumber, 100)}
-        return _randomNumber;
+        (bool transferWinnerStatus,) = payable(bet.winner).call{value : bet.paid}("");
+        require(transferWinnerStatus, "Failed to send money to winner");
+
     }
 }
