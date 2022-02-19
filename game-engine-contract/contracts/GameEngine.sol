@@ -524,7 +524,7 @@ contract Ownable is Context {
 }
 
 
-contract Token is Context, Ownable {
+contract GameEngine is Context, Ownable {
     using SafeMath for uint;
     using Address for address;
     using AddrArrayLib for AddrArrayLib.Addresses;
@@ -534,7 +534,11 @@ contract Token is Context, Ownable {
     mapping(string => uint) public betIdByHash;
     mapping(uint => uint) public betAmountById;
     mapping(address => uint) public lastBetIdBySender;
-    mapping(address => uint) public senderByBetId;
+    mapping(uint => address) public senderByBetId;
+
+    mapping(address => uint) public amountGained;
+    mapping(address => uint) public amountLost;
+
     Uint256ArrayLib.Values private openBets;
     uint tax = 1000;
     address taxTo;
@@ -545,12 +549,12 @@ contract Token is Context, Ownable {
         address winner;
         address looser;
     }
-    constructor(){
+    constructor() public{
         taxTo = msg.sender;
         manager[msg.sender] = true;
     }
     modifier onlyManager(){
-        require(manager[msg.sender], "not mager");
+        require(manager[msg.sender], "not manager");
         _;
     }
     mapping(string => BetResult) public betResults;
@@ -559,11 +563,11 @@ contract Token is Context, Ownable {
         uint id = ++betIndex;
         betIdByHash[hash] = id;
         uint value = msg.value;
-        uint tax = value.mul(tax).div(10000);
-        (bool s,) = payable(taxTo).call{value : tax}("");
+        uint _tax = value.mul(tax).div(10000);
+        (bool s,) = payable(taxTo).call{value : _tax}("");
         require(s, "Failed to send money to treasure");
 
-        betAmountById[id] = value;
+        betAmountById[id] = value.sub(_tax);
         lastBetIdBySender[msg.sender] = id;
         senderByBetId[id] = msg.sender;
         openBets.pushValue(id);
@@ -579,18 +583,19 @@ contract Token is Context, Ownable {
         return openBets.getAllValues();
     }
     function bet(uint winner, uint looser) public {
-        require(betAmountById[winner], "bet0: invalid deposit");
-        require(betAmountById[looser], "bet1: invalid deposit");
-        require(betAmountById[winner] == betAmountById[looser], "bet are not equals");
-        BetResult storage bet = betResults[hash];
-        bet.paid = betAmountById[winner] + betAmountById[looser];
-        bet.winner = senderByBetId[winner];
-        bet.looser = senderByBetId[looser];
-        betAmountById[winner] = 0;
-        betAmountById[looser] = 0;
-
-        (bool transferWinnerStatus,) = payable(bet.winner).call{value : bet.paid}("");
+        require(betAmountById[winner] > 0, "winner: invalid deposit");
+        require(betAmountById[looser] > 0, "looser: invalid deposit");
+        uint amount = betAmountById[winner].add(betAmountById[looser]);
+        openBets.removeValue(winner);
+        openBets.removeValue(looser);
+        (bool transferWinnerStatus,) = payable(senderByBetId[winner]).call{value : amount}("");
         require(transferWinnerStatus, "Failed to send money to winner");
 
+        // stats for each user win/loss
+        amountGained[ senderByBetId[winner] ] = amountGained[ senderByBetId[winner] ].add(amount);
+        amountLost[ senderByBetId[looser] ] = amountLost[ senderByBetId[looser] ].add(betAmountById[looser]);
+
+        betAmountById[winner] = 0;
+        betAmountById[looser] = 0;
     }
 }
