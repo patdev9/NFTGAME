@@ -76,14 +76,18 @@ async function server(){
             if( ! room ) return;
             let clients = room.clients;
             if( ! clients ) return;
-            const at = clients.indexOf(socket.id);
-            if( at !== -1 ){
-                clients.splice(at,1);
-                room.clients = clients;
-                rooms[roomId] = room;
-                const res = {room: roomId, message: socket.id+' left'}
-                io.emit(roomId, res);
+            let newClients = [];
+            for( let i in clients ){
+                if( clients[i] == socket.id)
+                    continue;
+                newClients.push(clients[i]);
             }
+            room.clients = newClients;
+            rooms[roomId] = room;
+
+            const res = {room: roomId, message: socket.id+' left'}
+            io.emit(roomId, res);
+
         });
         socket.on('message', (r) => {
             if( r.join ) {
@@ -103,14 +107,18 @@ async function server(){
                 console.log(room)
                 console.log(clients)
                 if( clients.length > 1 ){
-                    const hp = [];
+                    const hpList = room.hp || {};
                     for( let i in clients ){
                         const id = clients[i];
                         if( id == socket.id) continue;
                         const hit = randomIntFromInterval(1, 100);
-                        hp.push({id: id, hp: hit});
+                        let hp = hpList[id] || 0;
+                        hp += hit;
+                        if( hp > 100 ) hp = 100;
+                        hpList[id] = hp;
                     }
-                    const res = {room: roomId, message: JSON.stringify(hp)}
+                    room.hp = hpList;
+                    const res = {room: roomId, message: JSON.stringify(hpList)}
                     io.emit(r.room, res);
                 }else{
                     const res = {room: roomId, message: 'no enough participants: '+clients.length}
