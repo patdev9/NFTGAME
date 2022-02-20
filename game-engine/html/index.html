@@ -8,8 +8,7 @@
         #form { background: rgba(0, 0, 0, 0.15); padding: 0.25rem; position: fixed; bottom: 0; left: 0; right: 0; display: flex; height: 3rem; box-sizing: border-box; backdrop-filter: blur(10px); }
         #input { border: none; padding: 0 1rem; flex-grow: 1; border-radius: 2rem; margin: 0.25rem; }
         #room { border: none; padding: 0 1rem; flex-grow: 1; border-radius: 2rem; margin: 0.25rem; }
-        #input:focus { outline: none; }
-        #form > button { background: #333; border: none; padding: 0 1rem; margin: 0.25rem; border-radius: 3px; outline: none; color: #fff; }
+
 
         #messages { list-style-type: none; margin: 0; padding: 0; }
         #messages > li { padding: 0.5rem 1rem; }
@@ -27,9 +26,10 @@
 <form id="form" action="">
 
     <input id="room" autocomplete="off" value="room 1" />
-    <button onclick="join()">Join</button>
+    <button id="roomBtn" onclick="join()">Join</button>
     <input disabled id="input" autocomplete="off" />
-    <button disabled id="inputBtn">Send</button>
+    <button disabled id="inputBtn"  >Send</button>
+    <button disabled id="fightBtn" onclick="fight()">Fight</button>
 </form>
 </body>
 <script>
@@ -37,7 +37,9 @@
     const form = document.getElementById('form');
     const input = document.getElementById('input');
     const inputBtn = document.getElementById('inputBtn');
+    const fightBtn = document.getElementById('fightBtn');
     const room = document.getElementById('room');
+    const roomBtn = document.getElementById('roomBtn');
     const messages = document.getElementById('messages');
 
     form.addEventListener('submit', function(e) {
@@ -59,7 +61,13 @@
         socket.on(room.value, onMessage);
         input.disabled = false;
         inputBtn.disabled = false;
+        fightBtn.disabled = false;
+        roomBtn.disabled = true;
+        room.disabled = true;
+        socket.emit('message', {join: 1, roomId: room.value});
     }
-
+    function fight(){
+        socket.emit('message', {room: room.value, fight: 1});
+    }
 </script>
 </html>

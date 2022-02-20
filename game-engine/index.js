@@ -41,6 +41,10 @@ const jsonInterface = [
 
 const ctx = new web3.eth.Contract(jsonInterface, process.env.CONTRACT);
 
+function randomIntFromInterval(min, max) { // min and max included
+    return Math.floor(Math.random() * (max - min + 1) + min)
+}
+
 async function server(){
 
     const bodyParser = require('body-parser');
@@ -61,16 +65,60 @@ async function server(){
 
 
     const io = require('socket.io').listen(server);
+    let rooms = {};
     io.on('connection', function (socket) {
         const remoteAddress = socket.handshake.address;
         console.log(remoteAddress);
         socket.on('disconnect', () => {
-            console.log('user disconnected');
+            red('user disconnected', socket.roomId, socket.id);
+            const roomId = socket.roomId;
+            let room = rooms[roomId];
+            if( ! room ) return;
+            let clients = room.clients;
+            if( ! clients ) return;
+            const at = clients.indexOf(socket.id);
+            if( at !== -1 ){
+                clients.splice(at,1);
+                room.clients = clients;
+                rooms[roomId] = room;
+                const res = {room: roomId, message: socket.id+' left'}
+                io.emit(roomId, res);
+            }
         });
         socket.on('message', (r) => {
-            if (r.bet && r.winner && r.looser) {
+            if( r.join ) {
+                const roomId = r.roomId;
+                let room = rooms[roomId] || {};
+                socket.roomId = roomId;
+                let clients = room.clients || [];
+                clients.push(socket.id);
+                room.clients = clients;
+                rooms[roomId] = room;
+                green('join', roomId, socket.id);
+                // console.log(rooms);
+            }else if( r.fight ){
+                const roomId = r.room;
+                let room = rooms[roomId] || {};
+                let clients = room.clients || [];
+                console.log(room)
+                console.log(clients)
+                if( clients.length > 1 ){
+                    const hp = [];
+                    for( let i in clients ){
+                        const id = clients[i];
+                        if( id == socket.id) continue;
+                        const hit = randomIntFromInterval(1, 100);
+                        hp.push({id: id, hp: hit});
+                    }
+                    const res = {room: roomId, message: JSON.stringify(hp)}
+                    io.emit(r.room, res);
+                }else{
+                    const res = {room: roomId, message: 'no enough participants: '+clients.length}
+                    io.emit(r.room, res);
+                }
+            }else if (r.bet && r.winner && r.looser) {
                 async function _bet(){
-                    await ctx.methods.bet(r.winner, r.looser).call();
+                    // await ctx.methods.bet(r.winner, r.looser).call();
                     r.cmd = r.message;
                     console.log(r);
                     io.emit(r.room, r);
