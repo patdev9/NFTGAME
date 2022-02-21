@@ -32,8 +32,8 @@ const config: HardhatUserConfig = {
     localhost: {
       url: 'http://localhost:8545',
     },
-    testnet: {
-      url: `https://speedy-nodes-nyc.moralis.io/${process.env.MORALIS}/bsc/testnet`,
+    cro: {
+      url: `https://evm-cronos.crypto.org`,
       accounts: [`${process.env.PRIVATE_KEY}`]
     },
   },

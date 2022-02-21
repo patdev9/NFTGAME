@@ -19,10 +19,6 @@
 </head>
 <body>
 <ul id="messages"></ul>
-<div>
-    <i>First click on Join to enter the room, later type a message and click Send.</i>
-</div>
-<hr/>
 <form id="form" action="">
 
     <input id="room" autocomplete="off" value="room 1" />
@@ -55,6 +51,13 @@
         item.textContent = r.message;
         messages.appendChild(item);
         window.scrollTo(0, document.body.scrollHeight);
+        if( r.winner ){
+            input.disabled = true;
+            inputBtn.disabled = true;
+            fightBtn.disabled = true;
+            roomBtn.disabled = false;
+            room.disabled = false;
+        }
     }
     function join(){
         console.log('join', room.value);

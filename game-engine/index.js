@@ -5,7 +5,7 @@ process.on('uncaughtException', function (err) {
     //process.exit(1);
 });
 process.setMaxListeners(0);
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+
 require('events').EventEmitter.defaultMaxListeners = 0;
 
 const chalk = require('chalk');
@@ -43,6 +43,33 @@ const ctx = new web3.eth.Contract(jsonInterface, process.env.CONTRACT);
 
 function randomIntFromInterval(min, max) { // min and max included
     return Math.floor(Math.random() * (max - min + 1) + min)
+}
+
+async function onWin(io, r, hpList, roomId){
+    let winnerId, total = 0;
+    for (let id in hpList) {
+        total++;
+        if (hpList[id] >= 100)
+            continue;
+        if (winnerId) {
+            red('!winnerId');
+            // stop, we need only one winner
+            return false;
+        }
+        winnerId = id;
+    }
+
+    if( total > 1 ) {
+        const resWinner = {
+            room: roomId,
+            winner: winnerId,
+            message: winnerId + ': win! Participants: '
+        }
+        red(resWinner.message);
+        io.emit(r.room, resWinner);
+        return true;
+    }
+    return false;
 }
 
 async function server(){
@@ -103,14 +130,30 @@ async function server(){
             }else if( r.fight ){
                 const roomId = r.room;
                 let room = rooms[roomId] || {};
+                if(room.lastFighter == socket.id){
+                    const res = {room: roomId, message: socket.id+': you already fighted'}
+                    io.emit(r.room, res);
+                    return;
+                }
                 let clients = room.clients || [];
-                console.log(room)
-                console.log(clients)
+                // console.log(room)
+                // console.log(clients)
                 if( clients.length > 1 ){
                     const hpList = room.hp || {};
                     for( let i in clients ){
                         const id = clients[i];
-                        if( id == socket.id) continue;
+                        if( id == socket.id){
+                            if( hpList[id] == 100 ){
+                                const res = {room: roomId, message: socket.id+': you already lost'}
+                                io.emit(r.room, res);
+                                if(onWin(io, r, hpList, roomId) === true ){
+                                    red('DELETE ROOM!');
+                                    delete rooms[roomId];
+                                }
+                                return;
+                            }
+                            continue;
+                        }
                         const hit = randomIntFromInterval(1, 100);
                         let hp = hpList[id] || 0;
                         hp += hit;
@@ -118,10 +161,15 @@ async function server(){
                         hpList[id] = hp;
                     }
                     room.hp = hpList;
+                    room.lastFighter = socket.id;
                     const res = {room: roomId, message: JSON.stringify(hpList)}
                     io.emit(r.room, res);
+                    if( onWin(io, r, hpList, roomId) === true ){
+                        red('DELETE ROOM!!');
+                        delete rooms[roomId];
+                    }
                 }else{
-                    const res = {room: roomId, message: 'no enough participants: '+clients.length}
+                    const res = {room: roomId, message: socket.id+': no enough participants: '+clients.length}
                     io.emit(r.room, res);
                 }
             }else if (r.bet && r.winner && r.looser) {
