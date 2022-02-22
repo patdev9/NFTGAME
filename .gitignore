@@ -5,3 +5,5 @@
 .git
 node_modules
 .secret
+./game-engine-contract/node_modules
+./game-engine/node_modules
