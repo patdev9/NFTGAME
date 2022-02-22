@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Socket.IO chat</title>
+    <style>
+        body { margin: 0; padding-bottom: 3rem; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+
+        #form { background: rgba(0, 0, 0, 0.15); padding: 0.25rem; position: fixed; bottom: 0; left: 0; right: 0; display: flex; height: 3rem; box-sizing: border-box; backdrop-filter: blur(10px); }
+        #input { border: none; padding: 0 1rem; flex-grow: 1; border-radius: 2rem; margin: 0.25rem; }
+        #room { border: none; padding: 0 1rem; flex-grow: 1; border-radius: 2rem; margin: 0.25rem; }
+
+
+        #messages { list-style-type: none; margin: 0; padding: 0; }
+        #messages > li { padding: 0.5rem 1rem; }
+        #messages > li:nth-child(odd) { background: #efefef; }
+    </style>
+    <script src="/socket.io/socket.io.js"></script>
+
+</head>
+<body>
+<ul id="messages"></ul>
+<form id="form" action="">
+
+    <input id="room" autocomplete="off" value="room 1" />
+    <button id="roomBtn" onclick="join()">Join</button>
+    <input disabled id="input" autocomplete="off" />
+    <button disabled id="inputBtn"  >Send</button>
+    <button disabled id="fightBtn" onclick="fight()">Fight</button>
+</form>
+</body>
+<script>
+    const socket = io();
+    const form = document.getElementById('form');
+    const input = document.getElementById('input');
+    const inputBtn = document.getElementById('inputBtn');
+    const fightBtn = document.getElementById('fightBtn');
+    const room = document.getElementById('room');
+    const roomBtn = document.getElementById('roomBtn');
+    const messages = document.getElementById('messages');
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        if (input.value) {
+            socket.emit('message', {room: room.value, message: input.value});
+            input.value = '';
+        }
+    });
+    function onMessage(r){
+        console.log('onMessage', r);
+        var item = document.createElement('li');
+        item.textContent = r.message;
+        messages.appendChild(item);
+        window.scrollTo(0, document.body.scrollHeight);
+        if( r.winner ){
+            input.disabled = true;
+            inputBtn.disabled = true;
+            fightBtn.disabled = true;
+            roomBtn.disabled = false;
+            room.disabled = false;
+        }
+    }
+    function join(){
+        console.log('join', room.value);
+        socket.on(room.value, onMessage);
+        input.disabled = false;
+        inputBtn.disabled = false;
+        fightBtn.disabled = false;
+        roomBtn.disabled = true;
+        room.disabled = true;
+        socket.emit('message', {join: 1, roomId: room.value});
+    }
+    function fight(){
+        socket.emit('message', {room: room.value, fight: 1});
+    }
+</script>
+</html>

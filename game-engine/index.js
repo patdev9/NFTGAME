@@ -116,6 +116,7 @@ async function server(){
             io.emit(roomId, res);
 
         });
+        socket.on('pp',(r)=>{console.log(r)})
         socket.on('message', (r) => {
             if( r.join ) {
                 const roomId = r.roomId;

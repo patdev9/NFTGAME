@@ -1,76 +1,138 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <title>Socket.IO chat</title>
-    <style>
-        body { margin: 0; padding-bottom: 3rem; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  <head>
+    <title>BushiWorld</title>
 
-        #form { background: rgba(0, 0, 0, 0.15); padding: 0.25rem; position: fixed; bottom: 0; left: 0; right: 0; display: flex; height: 3rem; box-sizing: border-box; backdrop-filter: blur(10px); }
-        #input { border: none; padding: 0 1rem; flex-grow: 1; border-radius: 2rem; margin: 0.25rem; }
-        #room { border: none; padding: 0 1rem; flex-grow: 1; border-radius: 2rem; margin: 0.25rem; }
-
-
-        #messages { list-style-type: none; margin: 0; padding: 0; }
-        #messages > li { padding: 0.5rem 1rem; }
-        #messages > li:nth-child(odd) { background: #efefef; }
-    </style>
+    <!-- Font -->
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Ribeye&display=swap" rel="stylesheet">
+    <!-- Overworld styles -->
+    <link href="/styles/global.css" type="text/css" rel="stylesheet">
+    <link href="/styles/TextMessage.css" type="text/css" rel="stylesheet">
+    <link href="/styles/SceneTransition.css" type="text/css" rel="stylesheet">
+    <link href="/styles/KeyboardMenu.css" type="text/css" rel="stylesheet">
+    <link href="/styles/Hud.css" type="text/css" rel="stylesheet">
+    <link href="/styles/TitleScreen.css" type="text/css" rel="stylesheet">
+    <!-- Battle css -->
+    <link href="/styles/Battle.css" type="text/css" rel="stylesheet">
+    <link href="/styles/Combatant.css" type="text/css" rel="stylesheet">
+    <link href="/styles/SubmissionMenu.css" type="text/css" rel="stylesheet">
+    <link href="/styles/Team.css" type="text/css" rel="stylesheet">
+    <link href="/styles/Menus.css" type="text/css" rel="stylesheet">
     <script src="/socket.io/socket.io.js"></script>
+  </head>
+  <body>
+    <ul id="messages"></ul>
+    <form id="form" action="">
+    
+        <input id="room" autocomplete="off" value="room 1" />
+        <button id="roomBtn" onclick="join()">Join</button>
+        <input disabled id="input" autocomplete="off" />
+        <button disabled id="inputBtn"  >Send</button>
+        <button disabled id="fightBtn" onclick="fight()">Fight</button>
+    </form>
+    <div class="game-container">
+      <canvas class="game-canvas" width="352" height="198"></canvas>
+    </div>
 
-</head>
-<body>
-<ul id="messages"></ul>
-<form id="form" action="">
 
-    <input id="room" autocomplete="off" value="room 1" />
-    <button id="roomBtn" onclick="join()">Join</button>
-    <input disabled id="input" autocomplete="off" />
-    <button disabled id="inputBtn"  >Send</button>
-    <button disabled id="fightBtn" onclick="fight()">Fight</button>
-</form>
-</body>
-<script>
-    const socket = io();
-    const form = document.getElementById('form');
-    const input = document.getElementById('input');
-    const inputBtn = document.getElementById('inputBtn');
-    const fightBtn = document.getElementById('fightBtn');
-    const room = document.getElementById('room');
-    const roomBtn = document.getElementById('roomBtn');
-    const messages = document.getElementById('messages');
+    <!-- Content -->
+    <script src="/Content/pizzas.js"></script>
+    <script src="/Content/actions.js"></script>
+    <script src="/Content/enemies.js"></script>
 
-    form.addEventListener('submit', function(e) {
-        e.preventDefault();
-        if (input.value) {
-            socket.emit('message', {room: room.value, message: input.value});
-            input.value = '';
-        }
-    });
-    function onMessage(r){
-        console.log('onMessage', r);
-        var item = document.createElement('li');
-        item.textContent = r.message;
-        messages.appendChild(item);
-        window.scrollTo(0, document.body.scrollHeight);
-        if( r.winner ){
-            input.disabled = true;
-            inputBtn.disabled = true;
-            fightBtn.disabled = true;
-            roomBtn.disabled = false;
-            room.disabled = false;
-        }
-    }
-    function join(){
-        console.log('join', room.value);
-        socket.on(room.value, onMessage);
-        input.disabled = false;
-        inputBtn.disabled = false;
-        fightBtn.disabled = false;
-        roomBtn.disabled = true;
-        room.disabled = true;
-        socket.emit('message', {join: 1, roomId: room.value});
-    }
-    function fight(){
-        socket.emit('message', {room: room.value, fight: 1});
-    }
-</script>
+    <!-- State -->
+    <script src="/State/PlayerState.js"></script>
+
+    <!-- Scripts -->
+    <script src="/utils.js"></script>
+    <script src="/DirectionInput.js"></script>
+    <script src="/Overworld.js"></script>
+    <script src="/GameObject.js"></script>
+    <script src="/Person.js"></script>
+    <script src="/PizzaStone.js"></script>
+    <script src="/Sprite.js"></script>
+    <script src="/OverworldMap.js"></script>
+    <script src="/OverworldEvent.js"></script>
+    <script src="/TextMessage.js"></script>
+    <script src="/KeyPressListener.js"></script>
+    <script src="/RevealingText.js"></script>
+    <script src="/SceneTransition.js"></script>
+    <script src="/KeyboardMenu.js"></script>
+    <script src="/Hud.js"></script>
+    <script src="/PauseMenu.js"></script>
+    <script src="/CraftingMenu.js"></script>
+    <script src="/Progress.js"></script>
+    <script src="/TitleScreen.js"></script>
+
+    <!-- Battle -->
+    <script src="/Battle/Battle.js"></script>
+    <script src="/Battle/Combatant.js"></script>
+    <script src="/Battle/Team.js"></script>
+    <script src="/Battle/SubmissionMenu.js"></script>
+    <script src="/Battle/ReplacementMenu.js"></script>
+    <script src="/Battle/BattleEvent.js"></script>
+    <script src="/Battle/TurnCycle.js"></script>
+    <script src="/Battle/BattleAnimations.js"></script>
+
+    <script src="/init.js"></script>
+
+    <script>
+      const socket = io();
+      console.log(socket)
+      const form = document.getElementById('form');
+      const input = document.getElementById('input');
+      const inputBtn = document.getElementById('inputBtn');
+      const fightBtn = document.getElementById('fightBtn');
+      const room = document.getElementById('room');
+      const roomBtn = document.getElementById('roomBtn');
+      const messages = document.getElementById('messages');
+  
+      form.addEventListener('submit', function(e) {
+          e.preventDefault();
+          if (input.value) {
+              socket.emit('message', {room: room.value, message: input.value});
+              input.value = '';
+          }
+      });
+      function onMessage(r){
+          console.log('onMessage', r);
+          var item = document.createElement('li');
+          item.textContent = r.message;
+          messages.appendChild(item);
+          window.scrollTo(0, document.body.scrollHeight);
+          if( r.winner ){
+              input.disabled = true;
+              inputBtn.disabled = true;
+              fightBtn.disabled = true;
+              roomBtn.disabled = false;
+              room.disabled = false;
+          }
+      }
+      function join(){
+       
+    const battle = new Battle({
+      enemy: Enemies['Bushi'],
+      onComplete: (didWin) => {
+        resolve(didWin ? "WON_BATTLE" : "LOST_BATTLE");
+      }
+    })
+          battle.init(document.querySelector(".game-container"));
+          console.log('join', room.value);
+          socket.on(room.value, onMessage);
+          input.disabled = false;
+          inputBtn.disabled = false;
+          fightBtn.disabled = false;
+          roomBtn.disabled = true;
+          room.disabled = true;
+          socket.emit('message', {join: 1, roomId: room.value});
+      }
+      function fight(){
+          socket.emit('message', {room: room.value, fight: 1});
+      }
+  </script>
+
+  </body>
 </html>
